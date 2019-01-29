@@ -7,7 +7,7 @@ import {
   useCallback,
   InputIdentityList,
 } from 'react'
-import { tuple } from 'index'
+import { tuple } from './js-utils'
 
 /**
  * Allows emitting an effect using an async callback.

@@ -10,7 +10,7 @@ import {
   useContext,
 } from 'react'
 import produce from 'immer'
-import { tuple } from 'index'
+import { tuple } from './js-utils'
 
 declare const process: {
   env: {
