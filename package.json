@@ -1,6 +1,6 @@
 {
   "name": "@ferdaber/utils",
-  "version": "0.0.1-1",
+  "version": "0.0.1-2",
   "description": "A collection of utility functions, types, and components... and stuff.",
   "main": "lib/index.js",
   "types": "lib/index.ts",
@@ -9,7 +9,7 @@
     "ts:watch": "tsc --watch",
     "prepublishOnly": "tsc",
     "test": "jest",
-    "version:prerelease": "npm version prerelease && git tag next && npm publish --tag next && git push"
+    "version:prerelease": "npm version prerelease && git tag -f next && npm publish --tag next && git push"
   },
   "files": [
     "lib",
