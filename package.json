@@ -8,7 +8,8 @@
     "ts": "tsc",
     "ts:watch": "tsc --watch",
     "prepublishOnly": "tsc",
-    "test": "jest"
+    "test": "jest",
+    "version:prerelease": "npm version prerelease && git tag next && npm publish --tag next && git push"
   },
   "files": [
     "lib",
