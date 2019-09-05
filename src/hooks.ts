@@ -1,33 +1,40 @@
-import {
-  useEffect,
-  RefObject,
-  useState,
-  useRef,
-  useMemo,
-  useCallback,
-  InputIdentityList,
-} from 'react'
-import { tuple } from './js-utils'
+import { useEffect, RefObject, useState, useRef, useMemo, useCallback, DependencyList } from 'react'
 
+export interface EffectAbortController {
+  readonly aborted: boolean
+}
 /**
  * Allows emitting an effect using an async callback.
  * @param asyncEffect the async effect callback, if it returns a promised callback, it will be used as the cleanup when it resolves
- * @param inputs input array for inner `useEffect`
+ * @param deps input array for inner `useEffect`
  */
 export function useAsyncEffect(
-  asyncEffect: () => Promise<void | (() => void)>,
-  inputs?: InputIdentityList
+  asyncEffect: (abortController: EffectAbortController) => Promise<void | (() => void)>,
+  deps?: DependencyList
 ) {
   useEffect(() => {
-    const promise = asyncEffect()
+    const abortController = {
+      aborted: false,
+    }
+    const promise = asyncEffect(abortController)
     return () => {
+      abortController.aborted = true
       promise.then(cleanup => cleanup && cleanup())
     }
-  }, inputs)
+  }, deps)
+}
+
+export function useImmediateEffect(effect: () => void | (() => void), deps: DependencyList) {
+  const cleanup = useRef<() => void>()
+  useMemo(() => {
+    if (cleanup.current) {
+      cleanup.current()
+    }
+    cleanup.current = effect() || undefined
+  }, deps)
 }
 
 export type Measurable = Pick<Element, 'getBoundingClientRect'>
-
 /**
  * Allows retrieving measurements of an element efficiently. Measurements are taken
  * with every update of the element and window resizes, and can be triggered manually
@@ -36,87 +43,57 @@ export type Measurable = Pick<Element, 'getBoundingClientRect'>
  * @returns [the measurements; manual measure function]
  */
 export function useMeasurable(getMeasurable: RefObject<Measurable> | (() => Measurable | null)) {
-  const [measurements, setMeasurements] = useState<ClientRect | DOMRect | null>(null)
-  const instance = useRef({
-    blockNextMeasureEffect: false,
-    measurable: null as Measurable | null,
-    rafId: null as number | null,
-    timeoutId: null as number | null,
-    measure() {
-      // https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Performance_best_practices_for_Firefox_fe_engineers#How_do_I_avoid_triggering_uninterruptible_reflow
-      if (instance.rafId) window.cancelAnimationFrame(instance.rafId)
-      if (instance.timeoutId) window.clearTimeout(instance.timeoutId)
-      instance.rafId = window.requestAnimationFrame(() => {
-        instance.rafId = null
-        instance.timeoutId = window.setTimeout(() => {
-          instance.timeoutId = null
-          if (instance.measurable) {
-            // because we use an effect to catch any potential updates to the measurable
-            // we specifically block that effect from causing an infinite loop when we
-            // set the measurements state since that itself will trigger the effect
-            instance.blockNextMeasureEffect = true
-            setMeasurements(instance.measurable.getBoundingClientRect())
-          }
-        }, 0)
-      })
-    },
-  }).current
+  const [measurements, setMeasurements] = useState<ClientRect | null>(null)
+  const ref = useRef<Measurable>()
+  const measure = useCallback(() => {
+    if (!ref.current) return
+    // all properties are not own properties in a client rect, so destructure manually
+    const { left, top, right, bottom, height, width } = ref.current.getBoundingClientRect()
+    const rect = { left, top, right, bottom, height, width }
+    if (!measurements) return setMeasurements(rect)
+    for (const prop in rect) {
+      if (rect[prop] !== measurements[prop]) {
+        return setMeasurements(rect)
+      }
+    }
+  }, [measurements])
 
   useEffect(() => {
-    window.addEventListener('resize', instance.measure)
-    return () => {
-      window.removeEventListener('resize', instance.measure)
-      if (instance.rafId) window.cancelAnimationFrame(instance.rafId)
-      if (instance.timeoutId) window.clearTimeout(instance.timeoutId)
+    if ('current' in getMeasurable) {
+      ref.current = getMeasurable.current || undefined
+    } else {
+      ref.current = getMeasurable() || undefined
     }
-  }, [])
-
-  useEffect(() => {
-    instance.measurable =
-      typeof getMeasurable === 'function' ? getMeasurable() : getMeasurable.current
-    if (instance.measurable && !instance.blockNextMeasureEffect) {
-      instance.measure()
+    if (ref.current) {
+      measure()
     }
-    instance.blockNextMeasureEffect = false
   })
 
-  return tuple(measurements, instance.measure)
-}
+  useEffect(() => {
+    window.addEventListener('resize', measure)
+    return () => {
+      window.removeEventListener('resize', measure)
+    }
+  }, [measure])
 
-/**
- * Similar to `useState` but also returns a `resetState` method in the tuple to set the state
- * to its initial value. Note that changes in the `initialState` in subsequent renders
- * will not affect the initial value `resetState` uses (it will always use the value from the first render)
- * @param initialState the initial state or a callback to create the initial state
- * @returns [current state; standard set state function; reset the state to initial value]
- */
-export function useResettableState<T>(initialState: T | (() => T)) {
-  const memoizedInitialState = useMemo(
-    () => (typeof initialState === 'function' ? (initialState as () => T)() : initialState),
-    []
-  )
-  const [state, setState] = useState(memoizedInitialState)
-  const resetState = useCallback(() => setState(memoizedInitialState), [setState])
-  return tuple(state, setState, resetState)
+  return [measurements, measure] as const
 }
 
 /**
  * Runs a timer and returns whether or not that timer is expired.
  * Useful to suspend rendering of a component as it awaits some API return value
  * @param timeoutMs timeout in milliseconds
- * @param inputs optional inputs, the timeout will be reset if the inputs array changed, if no inputs are passed in then the timeout is only run once
+ * @param deps optional inputs, the timeout will be reset if the inputs array changed, if no inputs are passed in then the timeout is only run once
  * @returns whether the timeout has expired
  */
-export function useTimeout(timeoutMs: number, inputs: InputIdentityList = []) {
-  const timeoutId = useRef<number | null>(null)
-  const [expired, setExpired] = useState(false)
-  useEffect(() => {
-    if (expired) setExpired(false)
-    timeoutId.current = window.setTimeout(() => {
-      timeoutId.current = null
+export function useTimeout(timeoutMs: number, deps: DependencyList = []) {
+  let [expired, setExpired] = useState(false)
+  useImmediateEffect(() => {
+    setExpired((expired = false))
+    const timeoutId = window.setTimeout(() => {
       setExpired(true)
     }, timeoutMs)
-    return () => timeoutId.current && window.clearTimeout(timeoutId.current)
-  }, inputs)
+    return () => window.clearTimeout(timeoutId)
+  }, deps)
   return expired
 }

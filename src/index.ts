@@ -1,7 +1,13 @@
 import cx from 'clsx'
 import produce from 'immer'
 
-export { createStore, lazyLoad } from './react-utils'
-export { tuple, delay, delayRaf, map } from './js-utils'
-export { useAsyncEffect, useMeasurable, useResettableState, useTimeout } from './hooks'
+export { createStore, lazyLoad, StylePortal } from './react-utils'
+export {
+  useAsyncEffect,
+  useMeasurable,
+  useTimeout,
+  useImmediateEffect,
+  EffectAbortController,
+  Measurable,
+} from './hooks'
 export { cx, produce }

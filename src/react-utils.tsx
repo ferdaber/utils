@@ -1,4 +1,4 @@
-import {
+import React, {
   lazy,
   ComponentType,
   LazyExoticComponent,
@@ -6,11 +6,10 @@ import {
   Dispatch,
   ReactNode,
   useReducer,
-  useEffect,
   useContext,
+  useLayoutEffect,
 } from 'react'
 import produce from 'immer'
-import { tuple } from './js-utils'
 
 declare const process: {
   env: {
@@ -34,20 +33,13 @@ export function lazyLoad<TComponent extends ComponentType<any>>(
   }) as LazyExoticComponent<TComponent>
 }
 
-const defaultOptions = {}
 /**
  * Creates a simple store that supports mutations in the update function
  * @param initialState initial state of the store
  * @param options
  * @returns `Provider`: the store provider; `hook`: the hook that returns the store state and the updater function
  */
-export function createStore<TState>(
-  initialState: TState,
-  options: {
-    displayName?: string
-    onChange?(state: TState): void
-  } = defaultOptions
-) {
+export function createStore<TState>(initialState: TState, storeName?: string) {
   type TProducer = {
     (currentState: TState): TState | void
   }
@@ -65,24 +57,33 @@ export function createStore<TState>(
 
   function Provider({ children }: { children: ReactNode }) {
     const [state, dispatch] = useReducer(reducer, initialState)
-    useEffect(
-      () => {
-        options.onChange && options.onChange(state)
-      },
-      [state]
-    )
     return (
       <DispatchCtx.Provider value={dispatch}>
         <StateCtx.Provider value={state}>{children}</StateCtx.Provider>
       </DispatchCtx.Provider>
     )
   }
-  if (options.displayName) Provider.displayName = options.displayName
+  if (storeName) Provider.displayName = storeName
 
   return {
     Provider,
-    hook() {
-      return tuple(useContext(StateCtx), useContext(DispatchCtx))
+    useStore() {
+      return [useContext(StateCtx), useContext(DispatchCtx)] as const
+    },
+    useDispatch() {
+      return useContext(DispatchCtx)
     },
   }
+}
+
+export function StylePortal(props: { children: Element | null | undefined; className?: string }) {
+  const { children, className } = props
+  useLayoutEffect(() => {
+    if (!children || !className) return
+    children.classList.add(className)
+    return () => {
+      children.classList.remove(className)
+    }
+  }, [children, className])
+  return (null as unknown) as JSX.Element
 }

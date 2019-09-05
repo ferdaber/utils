@@ -3,7 +3,7 @@
   "version": "0.0.1-2",
   "description": "A collection of utility functions, types, and components... and stuff.",
   "main": "lib/index.js",
-  "types": "lib/index.ts",
+  "types": "lib/index.d.ts",
   "scripts": {
     "ts": "tsc",
     "ts:watch": "tsc --watch",
@@ -19,17 +19,17 @@
   "author": "Ferdy Budhidharma",
   "license": "ISC",
   "devDependencies": {
-    "@babel/core": "^7.2.2",
-    "@babel/preset-env": "^7.3.1",
-    "@babel/preset-typescript": "^7.1.0",
-    "@types/react": "^16.7.22",
-    "babel-jest": "^24.0.0",
-    "jest": "^24.0.0",
-    "react": "^16.8.0-alpha.1",
-    "typescript": "^3.2.4"
+    "@babel/core": "^7.5.5",
+    "@babel/preset-env": "^7.5.5",
+    "@babel/preset-typescript": "^7.3.3",
+    "@types/react": "^16.9.2",
+    "babel-jest": "^24.9.0",
+    "jest": "^24.9.0",
+    "react": "^16.9.0",
+    "typescript": "^3.6.2"
   },
   "dependencies": {
-    "clsx": "^1.0.1",
-    "immer": "^1.12.1"
+    "clsx": "^1.0.4",
+    "immer": "^3.2.0"
   }
 }
