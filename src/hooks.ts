@@ -247,7 +247,6 @@ export function useWatchValues(values: DependencyList, includeOnMount?: boolean)
   const prevValues = useRef(includeOnMount ? undefined : values)
   useDebugValue(prevValues.current)
   const changed =
-    !values ||
     !prevValues.current ||
     prevValues.current.length !== values.length ||
     prevValues.current.some((prevDep, i) => !Object.is(prevDep, values[i]))
@@ -310,16 +309,16 @@ export function useLazyRef<S>(init?: S | (() => S)) {
  * as long as dependencies don't change
  */
 export function useTrueMemo<T>(init: () => T, deps: DependencyList) {
-  const value = useLazyRef(init)
+  const value = useLazyRef<T>()
   let nextValue = value.current
   useImmediateEffect(() => {
     nextValue = init()
   }, deps)
   useDebugValue(nextValue)
-  useUpdateEffect(() => {
+  useEffect(() => {
     value.current = nextValue
   }, [nextValue])
-  return nextValue
+  return nextValue!
 }
 
 /**
