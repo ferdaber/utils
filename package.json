@@ -1,6 +1,6 @@
 {
   "name": "@ferdaber/utils",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "description": "A collection of utility functions, types, and components... and stuff.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
