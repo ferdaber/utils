@@ -8,6 +8,8 @@ import {
   Dispatch,
   SetStateAction,
   useLayoutEffect,
+  MutableRefObject,
+  useDebugValue,
 } from 'react'
 import { iss } from './js-utils'
 
@@ -34,6 +36,7 @@ export function useAsyncState<T, A extends any[]>(
   const [state, setState] = useState<AsyncState<T>>({
     loading: false,
   })
+  useDebugValue(state)
   useAsyncEffect(
     async signal => {
       setState(state => ({
@@ -76,6 +79,7 @@ export function useStoplightState<T extends readonly any[]>(
   initialIdx: number | (() => number) = 0
 ) {
   const [idx, setIdx] = useState(initialIdx)
+  useDebugValue([states[idx], idx])
   const next = useCallback(
     () => setIdx(idx => (idx + 1 < states.length ? idx + 1 : loop ? 0 : idx)),
     [loop, states.length]
@@ -99,6 +103,7 @@ interface ValueEvent {
  */
 export function useFormValueState(initialState: string | (() => string) = '') {
   const [state, setState] = useState(initialState)
+  useDebugValue(state)
   const eventHandler = useRef((event: ValueEvent) => setState(event.target.value)).current
   return [state, setState, eventHandler] as const
 }
@@ -115,6 +120,7 @@ interface CheckedEvent {
  */
 export function useFormToggleState(initialState: boolean | (() => boolean) = false) {
   const [state, setState] = useState(initialState)
+  useDebugValue(state)
   const eventHandler = useRef((event: CheckedEvent) => setState(event.target.checked)).current
   return [state, setState, eventHandler] as const
 }
@@ -125,6 +131,7 @@ export function useFormToggleState(initialState: boolean | (() => boolean) = fal
  */
 export function useToggleState(initialValue: boolean | (() => boolean) = false) {
   const [state, setState] = useState(initialValue)
+  useDebugValue(state)
   const toggleState = useRef(() => setState(v => !v)).current
   return [state, toggleState] as const
 }
@@ -142,6 +149,7 @@ export function useRerender() {
  */
 export function useIsMounted() {
   const isMounted = useRef(false)
+  useDebugValue(isMounted.current)
   useEffect(() => {
     isMounted.current = true
   }, [])
@@ -237,6 +245,7 @@ export function useAsyncEffect(
  */
 export function useWatchValues(values: DependencyList, includeOnMount?: boolean) {
   const prevValues = useRef(includeOnMount ? undefined : values)
+  useDebugValue(prevValues.current)
   const changed =
     !values ||
     !prevValues.current ||
@@ -285,6 +294,45 @@ export function useImmediateEffect(effect: () => void | (() => void), deps: Depe
 }
 
 /**
+ * A useRef wrapper that allows lazy initialization of its value
+ */
+export function useLazyRef<S>(init: S | (() => S)): MutableRefObject<S>
+export function useLazyRef<S = undefined>(): MutableRefObject<S | undefined>
+export function useLazyRef<S>(init?: S | (() => S)) {
+  const [nakedValue] = useState<S | undefined>(init)
+  const value = useRef(nakedValue)
+  useDebugValue(value.current)
+  return value
+}
+
+/**
+ * A useMemo wrapper that is semantically *guaranteed* to return the same value
+ * as long as dependencies don't change
+ */
+export function useTrueMemo<T>(init: () => T, deps: DependencyList) {
+  const value = useLazyRef(init)
+  let nextValue = value.current
+  useImmediateEffect(() => {
+    nextValue = init()
+  }, deps)
+  useDebugValue(nextValue)
+  useUpdateEffect(() => {
+    value.current = nextValue
+  }, [nextValue])
+  return nextValue
+}
+
+/**
+ * A useCallback wrapper that is semantically *guaranteed* to return the same value
+ * as long as dependencies don't change
+ */
+export function useTrueCallback<T extends (...args: any[]) => any>(cb: T, deps: DependencyList) {
+  const value = useTrueMemo(() => cb, deps)
+  useDebugValue(value)
+  return value
+}
+
+/**
  * Produces a ref that is "stateful" in that it has a setter function that
  * will trigger a rerender of the consuming component if its state changes. Note
  * that setting it to the same value will not trigger a rerender.
@@ -300,10 +348,8 @@ export function useStatefulRef<S = undefined>(): readonly [
   Dispatch<SetStateAction<S | undefined>>
 ]
 export function useStatefulRef<S>(initialValue?: S | (() => S)) {
-  // initial state can be lazily produced, so use useState to get its value
-  const [initialRefValue] = useState<S | undefined>(initialValue)
   // the volatile state container is a ref since it can be updated synchronously
-  const state = useRef(initialRefValue)
+  const state = useLazyRef<S | undefined>(initialValue)
   // use state as a "ref" to the current render cycle, rerenders of the same fiber will
   // have the same value for `ref`
   const [ref, setRef] = useState({ value: state.current })
@@ -334,6 +380,7 @@ export function useStatefulRef<S>(initialValue?: S | (() => S)) {
     lastRef.current = ref
   })
 
+  useDebugValue(state.current)
   return [state, setRefState] as const
 }
 
@@ -368,6 +415,7 @@ export function useComputedStatefulRef<S>(
   const deps = maybeDeps || (depsOrRecomputeValue as DependencyList)
   const depsChanged = useWatchValues(deps)
   if (depsChanged) setState(recomputeValue)
+  useDebugValue(state.current)
   return [state, setState] as const
 }
 
@@ -426,7 +474,7 @@ export function useMeasurable(
       window.removeEventListener('resize', measure)
     }
   }, [measure])
-
+  useDebugValue(measurements)
   return [measurements, measure] as const
 }
 
@@ -445,5 +493,6 @@ export function useTimeout(timeoutMs: number, deps: DependencyList = []) {
       window.clearTimeout(id)
     }
   }, [timeoutMs, ...deps])
+  useDebugValue(expired.current)
   return expired.current
 }
