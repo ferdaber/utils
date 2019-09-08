@@ -19,6 +19,11 @@ export {
   useFormToggleState,
   useFormValueState,
   useStoplightState,
+  useAsyncState,
+  useLazyRef,
+  useTrueCallback,
+  useTrueMemo,
+  AsyncState,
 } from './hooks'
-export { iss, shallowEquals } from './js-utils'
+export { iss, shallowEquals, array, delay, delayRaf, head, splice, tail, truthy } from './js-utils'
 export { cx, produce }
