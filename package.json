@@ -7,7 +7,8 @@
   "scripts": {
     "ts": "tsc",
     "ts:watch": "tsc --watch",
-    "prepublishOnly": "tsc",
+    "build": "node barrel-files && tsc",
+    "prepublishOnly": "node barrel-files.js && tsc",
     "test": "jest",
     "version:prerelease": "npm version prerelease && git tag -f next && npm publish --tag next && git push"
   },
@@ -28,13 +29,16 @@
     "@types/react": "^16.9.2",
     "@types/react-dom": "^16.9.0",
     "babel-jest": "^24.9.0",
+    "graceful-fs": "^4.2.2",
     "jest": "^24.9.0",
     "react": "^16.9.0",
     "react-dom": "^16.9.0",
     "typescript": "^3.6.2"
   },
   "dependencies": {
+    "@types/color": "^3.0.0",
     "clsx": "^1.0.4",
+    "color": "^3.1.2",
     "formik": "^1.5.8",
     "immer": "^3.2.0"
   }

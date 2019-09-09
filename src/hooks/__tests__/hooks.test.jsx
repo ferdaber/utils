@@ -1,5 +1,5 @@
 import React, { StrictMode } from 'react'
-import { render, cleanup, fireEvent } from '@testing-library/react'
+import { render, cleanup } from '@testing-library/react'
 import {
   useTrueMemo,
   useTrueCallback,
@@ -10,7 +10,7 @@ import {
   useWatchValues,
   useAsyncEffect,
   useUpdateEffect,
-} from '../hooks'
+} from '../index'
 import { act } from 'react-dom/test-utils'
 
 beforeEach(cleanup)

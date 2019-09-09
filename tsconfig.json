@@ -40,5 +40,5 @@
     "plugins": [{ "name": "typescript-styled-plugin" }]
   },
   "include": ["src"],
-  "exclude": ["src/__tests__"]
+  "exclude": ["src/hooks/__tests__"]
 }

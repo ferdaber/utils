@@ -75,3 +75,5 @@ export function delay<T = void>(ms: number, value?: T) {
 export function delayRaf<T = void>(value?: T) {
   return new Promise<T>(resolve => window.requestAnimationFrame(() => resolve(value)))
 }
+
+export function noop() {}
